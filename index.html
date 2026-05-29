@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ĐĂNG KÝ THÔNG TIN HỘI VIÊN</title>
+    <title>ĐĂNG KÝ HỒ SƠ HỘI VIÊN - HỘI DNT KHANHHOA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
@@ -234,9 +234,9 @@
 
                 <!-- Từ khóa chuyên môn (Tách tags) -->
                 <div>
-                    <label class="flex justify-between items-end form-label"><span>Từ khóa tìm kiếm chuyên môn</span> <span id="cnt-mem-kw" class="text-xs text-gray-400 font-normal">0/10</span></label>
+                    <label class="flex justify-between items-end form-label"><span>Từ khóa tìm kiếm <span class="text-xs text-gray-500 font-normal ml-1">(lĩnh vực chuyên môn cá nhân)</span></span> <span id="cnt-mem-kw" class="text-xs text-gray-400 font-normal">0/10</span></label>
                     <div class="form-container flex flex-col min-h-[48px]" style="padding:0.5rem">
-                        <input type="text" id="input-mem-kw" oninput="handleMemKeywordInput(this)" class="w-full bg-transparent text-sm outline-none text-gray-800 p-1 mb-1 placeholder-gray-400" placeholder="Gõ từ khóa và bấm phẩy (,) hoặc chấm phẩy (;)...">
+                        <input type="text" id="input-mem-kw" oninput="handleMemKeywordInput(this)" class="w-full bg-transparent text-sm outline-none text-gray-800 p-1 mb-1 placeholder-gray-400" placeholder="Ngăn cách bởi dấu (,) hoặc (;). Ví dụ: tư vấn chuyển đổi số; đào tạo AI; ...">
                         <div id="mem-kw-container" class="flex flex-wrap gap-2"></div>
                     </div>
                 </div>
@@ -536,7 +536,7 @@
             }
             inputEl.value = '';
         }
-        inputEl.placeholder = memKeywords.length >= 10 ? "Đã đạt tối đa 10 tags" : "Gõ từ khóa và bấm phẩy (,) hoặc chấm phẩy (;)...";
+        inputEl.placeholder = memKeywords.length >= 10 ? "Đã đạt tối đa 10 tags" : "Ngăn cách bởi dấu (,) hoặc (;). Ví dụ: tư vấn chuyển đổi số; đào tạo AI; ...";
         inputEl.disabled = memKeywords.length >= 10;
     }
     function renderMemKeywords() {
@@ -552,7 +552,7 @@
         renderMemKeywords();
         const inputEl = document.getElementById('input-mem-kw');
         inputEl.disabled = false;
-        inputEl.placeholder = "Gõ từ khóa và bấm phẩy (,) hoặc chấm phẩy (;)...";
+        inputEl.placeholder = "Ngăn cách bởi dấu (,) hoặc (;). Ví dụ: tư vấn chuyển đổi số; đào tạo AI; ...";
         saveDraft();
     }
 
@@ -1035,7 +1035,7 @@
     }
 
     // ==========================================
-    // 3. LOGIC KIỂM TRA MÃ SỐ THUẾ & ĐIỀN READ-ONLY
+    // 3. LOGIC KIỂM TRA M Mã SỐ THUẾ & ĐIỀN READ-ONLY
     // ==========================================
     async function checkTax(bId) {
         const input = document.getElementById(`input-tax-${bId}`);
