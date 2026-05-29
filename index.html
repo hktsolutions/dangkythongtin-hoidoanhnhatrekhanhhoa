@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ĐĂNG KÝ HỒ SƠ HỘI VIÊN</title>
+    <title>ĐĂNG KÝ THÔNG TIN HỘI VIÊN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
@@ -275,7 +275,7 @@
         </div>
 
         <div class="mt-12 border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <button onclick="prevPage()" class="text-gray-600 hover:text-black font-bold px-6 py-3 transition-colors underline">
+            <button id="btn-prev-page" onclick="prevPage()" class="text-gray-600 hover:text-black font-bold px-6 py-3 transition-colors underline">
                 🠔 Quay lại thông tin cá nhân
             </button>
             <button id="btn-submit" onclick="submitForm()" class="bg-red-600 hover:bg-red-700 text-white px-10 py-3.5 rounded-lg font-bold shadow-lg shadow-red-600/30 transition-all text-sm tracking-wide w-full md:w-auto">
@@ -386,10 +386,10 @@
             el.disabled = true;
             el.classList.add('bg-gray-50');
         });
-        // Ẩn tất cả nút thao tác (Trừ nút Copy Link và nút Submit)
+        // Ẩn tất cả nút thao tác (Trừ nút Copy Link, nút điều hướng và nút Submit)
         document.querySelectorAll('button').forEach(btn => {
             const onclickCode = btn.getAttribute('onclick') || '';
-            if (!onclickCode.includes('copyUrl') && !onclickCode.includes('closeModal') && btn.id !== 'btn-submit') {
+            if (!onclickCode.includes('copyUrl') && !onclickCode.includes('closeModal') && !onclickCode.includes('nextPage') && !onclickCode.includes('prevPage') && btn.id !== 'btn-submit') {
                 btn.style.display = 'none';
             }
         });
