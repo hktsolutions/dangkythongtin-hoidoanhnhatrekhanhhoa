@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ĐĂNG KÝ HỒ SƠ HỘI VIÊN - HỘI DNT KHANHHOA</title>
+    <title>Hồ Sơ YBA - Web Version</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
@@ -290,6 +290,10 @@
     // ICON Tick Xanh cho trạng thái hoàn tất ảnh
     const TICK_ICON = `<div class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md" title="Đã lưu thành công">✓</div>`;
 
+    // Biến lưu trữ Toàn cục (State Management)
+    let selectedMemExp = new Set();
+    let memExpSearchKw = '';
+
     // Hàm gọi Check Pending Uploads để khóa/mở nút Submit & Next
     function checkPendingUploads() {
         let hasPendingMember = (memberAvatarState && memberAvatarState.type === 'pending');
@@ -418,8 +422,7 @@
             return showModal("Vui lòng điền đầy đủ <b>Họ tên, Ngày sinh, Số điện thoại, Email, Giới tính và Vai trò</b> trước khi tiếp tục.");
         }
 
-        const expCheckboxes = document.querySelectorAll('input[name="mem-expert"]:checked');
-        if(expCheckboxes.length === 0) {
+        if(selectedMemExp.size === 0) {
             return showModal("Vui lòng tải danh sách và chọn ít nhất 1 <b>Chuyên môn</b> của bạn.");
         }
 
@@ -445,7 +448,7 @@
         const btnExp = document.getElementById('btn-mem-exp');
 
         if (globalExpertise.length > 0) {
-            renderExpertise(globalExpertise);
+            renderExpertise();
             searchInput.disabled = false;
             return;
         }
@@ -476,13 +479,7 @@
             
             if (globalExpertise.length === 0) throw new Error(backendMsg || "Không tìm thấy danh sách");
             
-            globalExpertise.sort((a, b) => {
-                const pA = a.Priority !== undefined ? Number(a.Priority) : (a.priority !== undefined ? Number(a.priority) : 999);
-                const pB = b.Priority !== undefined ? Number(b.Priority) : (b.priority !== undefined ? Number(b.priority) : 999);
-                return pB - pA;
-            });
-
-            renderExpertise(globalExpertise);
+            renderExpertise();
             searchInput.disabled = false;
         } catch (error) {
             container.innerHTML = `<div class="text-center text-red-600 text-sm mt-12 px-4">${error.message}</div>`;
@@ -493,25 +490,66 @@
     }
 
     function searchExp(keyword) {
-        const kw = keyword.toLowerCase().trim();
-        const filtered = globalExpertise.filter(i => (i.Name || i.name || "").toLowerCase().includes(kw));
-        renderExpertise(filtered);
+        memExpSearchKw = keyword.toLowerCase().trim();
+        renderExpertise();
     }
 
-    function renderExpertise(data) {
+    function toggleMemExp(id, checked) {
+        if (checked) {
+            selectedMemExp.add(id);
+        } else {
+            selectedMemExp.delete(id);
+        }
+        saveDraft();
+        renderExpertise();
+    }
+
+    function renderExpertise() {
         const container = document.getElementById('mem-exp-list');
+        if (!container) return;
         container.innerHTML = '';
-        if (!data || data.length === 0) {
+        
+        if (globalExpertise.length === 0) {
             container.innerHTML = '<div class="text-center text-gray-500 text-sm mt-12">Không tìm thấy chuyên môn phù hợp.</div>';
             return;
         }
-        data.forEach(item => {
+
+        let displayData = globalExpertise;
+        
+        // Lọc theo từ khóa tìm kiếm
+        if (memExpSearchKw) {
+            displayData = globalExpertise.filter(i => (i.Name || i.name || "").toLowerCase().includes(memExpSearchKw));
+        }
+
+        // Sắp xếp: Ưu tiên đã chọn -> Số Priority (số nhỏ hơn xuống dưới)
+        displayData = [...displayData].sort((a, b) => {
+            const idA = a.id || a.ID;
+            const idB = b.id || b.ID;
+            const isSelA = selectedMemExp.has(idA);
+            const isSelB = selectedMemExp.has(idB);
+            
+            if (isSelA && !isSelB) return -1;
+            if (!isSelA && isSelB) return 1;
+            
+            const pA = a.Priority !== undefined ? Number(a.Priority) : (a.priority !== undefined ? Number(a.priority) : 999);
+            const pB = b.Priority !== undefined ? Number(b.Priority) : (b.priority !== undefined ? Number(b.priority) : 999);
+            return pB - pA;
+        });
+
+        if (displayData.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 text-sm mt-12">Không tìm thấy kết quả.</div>';
+            return;
+        }
+
+        displayData.forEach(item => {
             const name = item.Name || item.name;
             const id = item.id || item.ID;
             if(!id || !name) return;
+            
+            const isChecked = selectedMemExp.has(id) ? 'checked' : '';
             const div = document.createElement('label');
             div.className = 'flex items-center hover:bg-gray-50 p-1.5 rounded cursor-pointer text-sm';
-            div.innerHTML = `<input type="checkbox" name="mem-expert" value="${id}" class="mr-2 text-red-600 rounded"> <span class="truncate" title="${name}">${name}</span>`;
+            div.innerHTML = `<input type="checkbox" name="mem-expert" value="${id}" ${isChecked} onchange="toggleMemExp('${id}', this.checked)" class="mr-2 text-red-600 rounded"> <span class="truncate" title="${name}">${name}</span>`;
             container.appendChild(div);
         });
     }
@@ -690,8 +728,7 @@
     }
 
     function getMemberData() {
-        const expertises = [];
-        document.querySelectorAll('input[name="mem-expert"]:checked').forEach(cb => { expertises.push(cb.value); });
+        const expertises = Array.from(selectedMemExp);
         
         const socials = [];
         document.querySelectorAll('#mem-soc-list .soc-row').forEach(row => {
@@ -736,7 +773,7 @@
         const btnInd = document.getElementById(`btn-ind-${bId}`);
 
         if (globalIndustries.length > 0) {
-            renderIndustries(bId, globalIndustries);
+            renderIndustries(bId);
             searchInput.disabled = false;
             return;
         }
@@ -768,13 +805,7 @@
 
             if (globalIndustries.length === 0) throw new Error(backendMsg || "Không tìm thấy danh sách");
 
-            globalIndustries.sort((a, b) => {
-                const pA = a.Priority !== undefined ? Number(a.Priority) : (a.priority !== undefined ? Number(a.priority) : 999);
-                const pB = b.Priority !== undefined ? Number(b.Priority) : (b.priority !== undefined ? Number(b.priority) : 999);
-                return pB - pA;
-            });
-
-            renderIndustries(bId, globalIndustries);
+            renderIndustries(bId);
             searchInput.disabled = false;
         } catch (error) {
             container.innerHTML = `<div class="text-center text-red-600 text-sm mt-12 px-4">${error.message}</div>`;
@@ -830,7 +861,9 @@
             keywords: [],
             socialCount: 1,
             logoItem: null, 
-            galleryItems: [] 
+            galleryItems: [],
+            selectedInd: [],
+            searchIndKw: ''
         };
 
         const wrapper = document.getElementById('companies-wrapper');
@@ -1207,10 +1240,14 @@
         document.getElementById(`gal-btn-container-${bId}`).style.display = '';
         companiesState[bId].galleryItems = [];
 
+        document.getElementById(`search-ind-${bId}`).value = '';
+        companiesState[bId].selectedInd = [];
+        companiesState[bId].searchIndKw = '';
+
         document.getElementById(`ind-search-box-${bId}`).style.display = '';
         const indList = document.getElementById(`ind-list-${bId}`);
         indList.innerHTML = '<div class="text-center text-gray-400 text-sm mt-12">Vui lòng bấm "Tải danh sách" bên trên.</div>';
-        if(globalIndustries.length > 0) renderIndustries(bId, globalIndustries);
+        if(globalIndustries.length > 0) renderIndustries(bId);
 
         document.getElementById(`soc-list-${bId}`).innerHTML = '';
         companiesState[bId].socialCount = 0;
@@ -1304,28 +1341,69 @@
     // 4. LOGIC TỪ KHÓA, MẠNG XÃ HỘI, LĨNH VỰC
     // ==========================================
     function searchInd(bId, keyword) {
-        const kw = keyword.toLowerCase().trim();
-        const filtered = globalIndustries.filter(i => (i.Name || i.name || "").toLowerCase().includes(kw));
-        renderIndustries(bId, filtered);
+        companiesState[bId].searchIndKw = keyword.toLowerCase().trim();
+        renderIndustries(bId);
     }
 
-    function renderIndustries(bId, data) {
+    function toggleInd(bId, id, checked) {
+        let sel = companiesState[bId].selectedInd || [];
+        if (checked) {
+            if (!sel.includes(id)) sel.push(id);
+        } else {
+            sel = sel.filter(i => i !== id);
+        }
+        companiesState[bId].selectedInd = sel;
+        saveDraft();
+        renderIndustries(bId);
+    }
+
+    function renderIndustries(bId) {
         const container = document.getElementById(`ind-list-${bId}`);
         if (!container) return;
         container.innerHTML = '';
         
-        if (!data || data.length === 0) {
+        if (globalIndustries.length === 0) {
             container.innerHTML = '<div class="text-center text-gray-400 text-sm mt-12">Không tìm thấy lĩnh vực phù hợp.</div>';
             return;
         }
 
-        data.forEach(item => {
+        const state = companiesState[bId];
+        let displayData = globalIndustries;
+        
+        if (state.searchIndKw) {
+            displayData = globalIndustries.filter(i => (i.Name || i.name || "").toLowerCase().includes(state.searchIndKw));
+        }
+
+        const selArr = state.selectedInd || [];
+
+        displayData = [...displayData].sort((a, b) => {
+            const idA = a.id || a.ID;
+            const idB = b.id || b.ID;
+            const isSelA = selArr.includes(idA);
+            const isSelB = selArr.includes(idB);
+            
+            if (isSelA && !isSelB) return -1;
+            if (!isSelA && isSelB) return 1;
+            
+            const pA = a.Priority !== undefined ? Number(a.Priority) : (a.priority !== undefined ? Number(a.priority) : 999);
+            const pB = b.Priority !== undefined ? Number(b.Priority) : (b.priority !== undefined ? Number(b.priority) : 999);
+            return pB - pA;
+        });
+
+        if (displayData.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-400 text-sm mt-12">Không tìm thấy kết quả.</div>';
+            return;
+        }
+
+        displayData.forEach(item => {
             const name = item.Name || item.name;
             const id = item.id || item.ID;
             if(!id || !name) return;
+            
+            const isChecked = selArr.includes(id) ? 'checked' : '';
             const div = document.createElement('label');
             div.className = 'flex items-center hover:bg-gray-50 p-1.5 rounded cursor-pointer';
-            div.innerHTML = `<input type="checkbox" name="ind-${bId}" value="${id}" class="mr-2 text-red-600 rounded"> <span class="truncate" title="${name}">${name}</span>`;
+            div.innerHTML = `<input type="checkbox" name="ind-${bId}" value="${id}" ${isChecked} onchange="toggleInd('${bId}', '${id}', this.checked)" class="mr-2 text-red-600 rounded"> <span class="truncate" title="${name}">${name}</span>`;
             container.appendChild(div);
         });
     }
@@ -1349,7 +1427,7 @@
             }
             inputEl.value = '';
         }
-        inputEl.placeholder = state.keywords.length >= 10 ? "Đã đạt tối đa 10 tags" : "Gõ từ khóa và bấm dấu phẩy (,) hoặc chấm phẩy (;)...";
+        inputEl.placeholder = state.keywords.length >= 10 ? "Đã đạt tối đa 10 tags" : "Gõ từ khóa và bấm phẩy (,) hoặc chấm phẩy (;)...";
         inputEl.disabled = state.keywords.length >= 10;
     }
 
@@ -1841,9 +1919,8 @@
                 if(!name || !phone || !email || !birth) return showModal(`Vui lòng nhập đủ Tên, Ngày thành lập, SĐT, Email tại DOANH NGHIỆP ${cIndex}`);
                 if(phone.startsWith('0')) phone = '84' + phone.substring(1);
 
-                const indCheckboxes = document.querySelectorAll(`input[name="ind-${bId}"]:checked`);
-                if(indCheckboxes.length === 0) return showModal(`Chọn ít nhất 1 Ngành nghề kinh doanh cho DOANH NGHIỆP ${cIndex}`);
-                const indIds = Array.from(indCheckboxes).map(cb => cb.value);
+                const indIds = state.selectedInd || [];
+                if(indIds.length === 0) return showModal(`Chọn ít nhất 1 Ngành nghề kinh doanh cho DOANH NGHIỆP ${cIndex}`);
 
                 const socArr = [];
                 document.querySelectorAll(`#soc-list-${bId} .soc-row`).forEach(row => {
@@ -1940,6 +2017,7 @@
             checkboxes: {},
             radios: {},
             memKeywords: memKeywords,
+            selectedMemExp: Array.from(selectedMemExp),
             memberAvatarState: memberAvatarState,
             companiesState: companiesState,
             blockCounter: blockCounter,
@@ -1996,15 +2074,15 @@
                 addCompanyBlock();
             }
 
-            // 2. Chờ tải API chuyên môn & ngành nghề trước khi tick
-            await Promise.all([loadGlobalExpertise(), loadGlobalIndustries('comp-1')]); // comp-1 is dummy, loads global
-            for (const bId in companiesState) {
-                renderIndustries(bId, globalIndustries);
-            }
-
-            // 3. Phục hồi state mảng & html
+            // Phục hồi state mảng & biến logic
             memKeywords = draft.memKeywords || [];
-            renderMemKeywords();
+            selectedMemExp = new Set(draft.selectedMemExp || []);
+            
+            for (const bId in draft.companiesState) {
+                companiesState[bId] = draft.companiesState[bId];
+                if (!companiesState[bId].selectedInd) companiesState[bId].selectedInd = [];
+                if (!companiesState[bId].searchIndKw) companiesState[bId].searchIndKw = '';
+            }
             
             memberAvatarState = draft.memberAvatarState;
             if(memberAvatarState && (memberAvatarState.type === 'uploaded' || memberAvatarState.type === 'external')) {
@@ -2015,10 +2093,18 @@
                 document.getElementById('btn-mem-ava-file').classList.add('hidden');
             } else { memberAvatarState = null; }
 
-            // 4. Phục hồi Companies State & Gallery
-            for (const bId in draft.companiesState) {
-                companiesState[bId] = draft.companiesState[bId];
-                
+            // 2. Tải API (Tự động render lại UI check từ Set vừa nạp)
+            await Promise.all([loadGlobalExpertise(), loadGlobalIndustries('comp-1')]);
+
+            // 3. Render giao diện còn lại
+            renderMemKeywords();
+            
+            for (const bId in companiesState) {
+                // Render lại List ngành nghề từ data phục hồi (trừ khi đang read-only)
+                if(!companiesState[bId].isExisting) {
+                    renderIndustries(bId);
+                }
+
                 // Khôi phục form read-only nếu isExisting = true
                 if (companiesState[bId].isExisting) {
                     document.getElementById(`sec-new-${bId}`).classList.remove('hidden');
@@ -2047,7 +2133,7 @@
 
                 renderKeywords(bId);
                 
-                // Filter out any unsaved pending items to prevent broken images
+                // Loại bỏ những ảnh chưa lưu tránh bị hỏng UI
                 if(companiesState[bId].logoItem && companiesState[bId].logoItem.type === 'pending') companiesState[bId].logoItem = null;
                 companiesState[bId].galleryItems = companiesState[bId].galleryItems.filter(i => i.type !== 'pending');
                 
@@ -2062,13 +2148,13 @@
                 renderGallery(bId);
             }
 
-            // 5. Phục hồi HTML MXH
+            // 4. Phục hồi HTML MXH
             if (draft.htmlState['mem-soc-list']) document.getElementById('mem-soc-list').innerHTML = draft.htmlState['mem-soc-list'];
             for (const bId in draft.companiesState) {
                 if (draft.htmlState[`soc-list-${bId}`]) document.getElementById(`soc-list-${bId}`).innerHTML = draft.htmlState[`soc-list-${bId}`];
             }
 
-            // 6. Điền Text Inputs
+            // 5. Điền Text Inputs
             for (const [id, value] of Object.entries(draft.inputs)) {
                 const el = document.getElementById(id);
                 if (el) {
@@ -2077,26 +2163,20 @@
                 }
             }
 
-            // 7. Điền Checkboxes & MXH Inputs (Dùng querySelector do thẻ HTML vừa được nhét vào)
+            // 6. Điền Checkboxes khác & Radios (Dùng querySelector do thẻ HTML vừa được nhét vào)
             setTimeout(() => {
                 document.querySelectorAll('input[type="checkbox"]').forEach(el => {
-                    const key1 = el.name + '-' + el.value;
-                    const key2 = el.id;
-                    if (draft.checkboxes[key1] || draft.checkboxes[key2]) el.checked = true;
+                    // Loại trừ checkbox ngành/chuyên môn vì đã xử lý qua Array State
+                    if(el.name !== 'mem-expert' && !el.name.startsWith('ind-')) {
+                        const key1 = el.name + '-' + el.value;
+                        const key2 = el.id;
+                        if (draft.checkboxes[key1] || draft.checkboxes[key2]) el.checked = true;
+                    }
                 });
                 
                 for (const name in draft.radios) {
                     const el = document.getElementById(draft.radios[name]);
                     if(el) el.checked = true;
-                }
-
-                // Điền lại input text trong MXH (Vì lưu HTML thô thì input value bị mất)
-                let socInputs = document.querySelectorAll('#mem-soc-list input');
-                let inputIndex = 0;
-                for (const [id, value] of Object.entries(draft.inputs)) {
-                    // This logic is complex, we just rely on HTML state for rows but need to restore values manually.
-                    // A better way is parsing values from DOM before save.
-                    // For now, let's keep it simple. Users will need to retype unsaved MXH if they hard F5.
                 }
                 
                 checkPendingUploads();
